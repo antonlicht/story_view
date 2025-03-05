@@ -23,16 +23,33 @@ class VideoLoader {
     if (this.videoFile != null) {
       this.state = LoadState.success;
       onComplete();
+      return; // Exit early if the video is already loaded
     }
 
-    final fileStream = DefaultCacheManager()
-        .getFileStream(this.url, headers: this.requestHeaders as Map<String, String>?);
+    final fileStream = DefaultCacheManager().getFileStream(
+      this.url,
+      headers: this.requestHeaders as Map<String, String>?,
+    );
 
-    fileStream.listen((fileResponse) {
+    fileStream.listen((fileResponse) async {
+
       if (fileResponse is FileInfo) {
         if (this.videoFile == null) {
+          File originalFile = fileResponse.file;
+
+          // Ensure file has .mp4 extension
+          String newPath = originalFile.path.replaceAll('.bin', '.${this.url.split(".").last}');
+          File mp4File = await originalFile.rename(newPath);
+
+          // Cache the renamed file
+          await DefaultCacheManager().putFile(
+            this.url,
+            mp4File.readAsBytesSync(),
+            fileExtension: this.url.split(".").last,
+          );
+
           this.state = LoadState.success;
-          this.videoFile = fileResponse.file;
+          this.videoFile = mp4File;
           onComplete();
         }
       }
@@ -101,12 +118,12 @@ class StoryVideoState extends State<StoryVideo> {
         if (widget.storyController != null) {
           _streamSubscription =
               widget.storyController!.playbackNotifier.listen((playbackState) {
-            if (playbackState == PlaybackState.pause) {
-              playerController!.pause();
-            } else {
-              playerController!.play();
-            }
-          });
+                if (playbackState == PlaybackState.pause) {
+                  playerController!.pause();
+                } else {
+                  playerController!.play();
+                }
+              });
         }
       } else {
         setState(() {});
@@ -127,22 +144,22 @@ class StoryVideoState extends State<StoryVideo> {
 
     return widget.videoLoader.state == LoadState.loading
         ? Center(
-            child: widget.loadingWidget?? Container(
-              width: 70,
-              height: 70,
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                strokeWidth: 3,
-              ),
-            ),
-          )
+      child: widget.loadingWidget?? Container(
+        width: 70,
+        height: 70,
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          strokeWidth: 3,
+        ),
+      ),
+    )
         : Center(
-            child: widget.errorWidget?? Text(
-            "Media failed to load.",
-            style: TextStyle(
-              color: Colors.white,
-            ),
-          ));
+        child: widget.errorWidget?? Text(
+          "Media failed to load.",
+          style: TextStyle(
+            color: Colors.white,
+          ),
+        ));
   }
 
   @override
