@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:story_view/widgets/story_view.dart';
 import 'package:video_player/video_player.dart';
 
 import '../utils.dart';
@@ -115,6 +116,7 @@ class StoryVideoState extends State<StoryVideo> {
 
         playerController!.initialize().then((v) {
           setState(() {});
+          _updateDuration(playerController!.value.duration);
           widget.storyController!.play();
         });
 
@@ -132,6 +134,11 @@ class StoryVideoState extends State<StoryVideo> {
         setState(() {});
       }
     });
+  }
+
+  void _updateDuration(Duration duration) {
+    final state = context.findAncestorStateOfType<StoryViewState>();
+    state?.setCurrentStoryItemDuration(duration);
   }
 
   Widget getContentView() {

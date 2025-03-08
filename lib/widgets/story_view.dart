@@ -60,9 +60,9 @@ class StoryItem {
     Duration? duration,
   }) {
     double contrast = ContrastHelper.contrast([
-      backgroundColor.red,
-      backgroundColor.green,
-      backgroundColor.blue,
+      backgroundColor.r,
+      backgroundColor.g,
+      backgroundColor.b,
     ], [
       255,
       255,
@@ -440,6 +440,7 @@ class StoryViewState extends State<StoryView> with TickerProviderStateMixin {
   AnimationController? _animationController;
   Animation<double>? _currentAnimation;
   Timer? _nextDebouncer;
+  Duration? _currentStoryItemDuration;
 
   StreamSubscription<PlaybackState>? _playbackSubscription;
 
@@ -478,6 +479,9 @@ class StoryViewState extends State<StoryView> with TickerProviderStateMixin {
       switch (playbackStatus) {
         case PlaybackState.play:
           _removeNextHold();
+          if (_currentStoryItemDuration != null) {
+            _beginPlay();
+          }
           this._animationController?.forward();
           break;
 
@@ -518,6 +522,10 @@ class StoryViewState extends State<StoryView> with TickerProviderStateMixin {
     }
   }
 
+  void setCurrentStoryItemDuration(Duration duration) {
+    _currentStoryItemDuration = duration;
+  }
+
   void _play() {
     _animationController?.dispose();
     // get the next playing page
@@ -531,8 +539,12 @@ class StoryViewState extends State<StoryView> with TickerProviderStateMixin {
       widget.onStoryShow!(storyItem, storyItemIndex);
     }
 
-    _animationController =
-        AnimationController(duration: storyItem.duration, vsync: this);
+    _animationController = AnimationController(
+      duration: _currentStoryItemDuration ?? storyItem.duration,
+      vsync: this,
+    );
+
+    _currentStoryItemDuration = null;
 
     _animationController!.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
@@ -831,11 +843,11 @@ class StoryProgressIndicator extends StatelessWidget {
         this.indicatorHeight,
       ),
       foregroundPainter: IndicatorOval(
-        this.indicatorForegroundColor?? Colors.white.withOpacity(0.8),
+        this.indicatorForegroundColor?? Colors.white.withValues(alpha: 0.8),
         this.value,
       ),
       painter: IndicatorOval(
-        this.indicatorColor?? Colors.white.withOpacity(0.4),
+        this.indicatorColor?? Colors.white.withValues(alpha: 0.4),
         1.0,
       ),
     );
